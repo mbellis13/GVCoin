@@ -180,7 +180,11 @@ public class Blockchain implements Serializable
 					for(HashMap m : t.getOutputs())
 					{
 						if(m.get("address").equals(keyString))
+						{
+							System.out.println(m.get("amount"));
 							amt = (Double)(m.get("amount"));
+						}
+							
 					}
 				}
 			}

@@ -123,6 +123,7 @@ public class TransactionPool
 		
 		for(Transaction t: pool)
 		{	
+			System.out.println(t);
 			boolean add = false;
 			for(HashMap output: t.getOutputs())
 			{

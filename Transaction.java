@@ -92,24 +92,33 @@ public class Transaction implements Serializable
 	 * @throws NoSuchProviderException 
 	 * @throws InvalidKeySpecException 
 	 */
-	public Transaction(KeyPair key,Blockchain bc, TransactionPool pool, String recipient, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException 
+	public Transaction(KeyPair key,Blockchain bc, TransactionPool pool, String[] recipient, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException 
 	{
 		if (amount > bc.getKeyBalance(pool, key.getPublic()))
 		{
 			throw new IllegalArgumentException("amount: " + amount + "exceeds balance.");
 		}
-		this.recipient = recipient;
-		double recipientBalance = bc.getKeyBalance(pool, Utility.retrievePublicKey(recipient));
+		this.recipient = recipient[0];
+		double recipientBalance = bc.getKeyBalance(pool, Utility.retrievePublicKey(this.recipient));
 		
 		outputs = new ArrayList<HashMap>();
 		HashMap op1 = new HashMap();
-		op1.put("amount", bc.getKeyBalance(pool,key.getPublic()) - amount);
+		op1.put("amount",0.0);// bc.getKeyBalance(pool,key.getPublic()) - amount);
 		op1.put("address",Utility.publicKeyToAddress(key.getPublic()));
 		outputs.add(op1);
+		
 		HashMap op2 = new HashMap();
 		op2.put("amount",amount + recipientBalance);
-		op2.put("address",recipient);
+		op2.put("address",recipient[0]);
 		outputs.add(op2);
+		
+		if(recipient.length > 1) //index 0 for recipient, index 1 for change
+		{
+			HashMap op3 = new HashMap();
+			op3.put("amount",bc.getKeyBalance(pool,key.getPublic()) - amount);
+			op3.put("address",recipient[1]);
+			outputs.add(op3);
+		}
 		
 		
 		id = UUID.randomUUID().toString();

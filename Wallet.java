@@ -159,10 +159,16 @@ public class Wallet
 			double remaining = bc.getKeyBalance(pool, key.getPublic());
 			if(i == 0 && totalSending <= remaining)
 			{
-
+				PublicKey newKey = null;
+				try {
+					newKey = generateNewKey();
+				} catch (FileNotFoundException e1) {
+					e1.printStackTrace();
+				}
+				String[] transAddrs = {destAddr, Utility.publicKeyToAddress(newKey)};
 				try {
 					
-					Transaction t = new Transaction(key, bc, pool,destAddr,totalSending );
+					Transaction t = new Transaction(key, bc, pool,transAddrs,totalSending );
 					return t;
 					
 					//i = outstandingPairs.size();
@@ -179,9 +185,20 @@ public class Wallet
 				keysForInputs.add(key);
 				lastAmt = totalSending;
 				HashMap op = new HashMap();
-				op.put("amount",remaining-lastAmt);
+				op.put("amount",0);//remaining-lastAmt);
 				op.put("address",Utility.publicKeyToAddress(key.getPublic()));
 				outputs.add(op);
+				PublicKey newKey = null;
+				try {
+					newKey = generateNewKey();
+				} catch (FileNotFoundException e1) {
+					e1.printStackTrace();
+				}
+				String changeAddr = Utility.publicKeyToAddress(newKey);
+				HashMap change = new HashMap();
+				change.put("amount", remaining-lastAmt);
+				change.put("address", changeAddr);
+				outputs.add(change);
 				break;
 			}
 			else
@@ -217,6 +234,7 @@ public class Wallet
 				
 			
 		}
+		
 		Transaction newTransaction = new Transaction(inputs,outputs,destAddr);
 		pending.add(newTransaction);
 		return newTransaction;
