@@ -146,8 +146,8 @@ public class Wallet
 	 */
 	public Transaction generateTransactions(String destAddr,Blockchain bc, TransactionPool pool, double amt) throws InvalidKeySpecException, NoSuchProviderException
 	{	
-		ArrayList<HashMap> inputs = new ArrayList<HashMap>();
-		ArrayList<HashMap> outputs = new ArrayList<HashMap>();
+		ArrayList<HashMap<String, String>> inputs = new ArrayList<HashMap<String, String>>();
+		ArrayList<HashMap<String, String>> outputs = new ArrayList<HashMap<String, String>>();
 		ArrayList<KeyPair>keysForInputs = new ArrayList<KeyPair>();
 		ArrayList<Transaction> transactions = new ArrayList<Transaction>();
 		double lastAmt = 0;
@@ -184,8 +184,8 @@ public class Wallet
 			{
 				keysForInputs.add(key);
 				lastAmt = totalSending;
-				HashMap op = new HashMap();
-				op.put("amount",0);//remaining-lastAmt);
+				HashMap<String, String> op = new HashMap<String, String>();
+				op.put("amount","0");//remaining-lastAmt);
 				op.put("address",Utility.publicKeyToAddress(key.getPublic()));
 				outputs.add(op);
 				PublicKey newKey = null;
@@ -195,8 +195,8 @@ public class Wallet
 					e1.printStackTrace();
 				}
 				String changeAddr = Utility.publicKeyToAddress(newKey);
-				HashMap change = new HashMap();
-				change.put("amount", remaining-lastAmt);
+				HashMap<String, String> change = new HashMap<String, String>();
+				change.put("amount", (remaining-lastAmt)+"");
 				change.put("address", changeAddr);
 				outputs.add(change);
 				break;
@@ -205,8 +205,8 @@ public class Wallet
 			{
 				keysForInputs.add(key);
 				totalSending-=remaining;
-				HashMap op = new HashMap();
-				op.put("amount",0.0);
+				HashMap<String, String> op = new HashMap<String, String>();
+				op.put("amount","0.0");
 				op.put("address",Utility.publicKeyToAddress(key.getPublic()));
 				outputs.add(op);
 				
@@ -217,9 +217,9 @@ public class Wallet
 		for(KeyPair key: spentPairs)
 			outstandingPairs.remove(key);
 		
-		HashMap op1 = new HashMap();
+		HashMap<String, String> op1 = new HashMap<String, String>();
 		op1.put("address", destAddr);
-		op1.put("amount",amt);
+		op1.put("amount",""+amt);
 		outputs.add(op1);
 		for(KeyPair key: keysForInputs)
 		{	

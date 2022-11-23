@@ -14,6 +14,7 @@ public class Message implements Serializable
 	
 	enum Message_Type{
 		REPLACE_CHAIN,//call replace_chain
+		REQUEST_CHAIN,//request current chain
 		ADD_TRANS,//call updateOrAdd
 		CLEAR_TRANS,//call clear transaction
 		DONE,

@@ -11,7 +11,6 @@ import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 
 
@@ -97,13 +96,13 @@ public class Blockchain implements Serializable
 				
 				for(Transaction t : b.getData()) 
 				{
-					for(HashMap m: t.getOutputs())
+					for(HashMap<String, String> m: t.getOutputs())
 					{
 						
 						if(m.get("address").equals(pubKey))
 						{
 	
-							return (Double) m.get("amount");
+							return Double.parseDouble(m.get("amount"));
 						}
 					}
 				}
@@ -136,12 +135,12 @@ public class Blockchain implements Serializable
 			if(check.getID().equals(trans.getID()))
 				break;
 			
-			for(HashMap output: check.getOutputs())
+			for(HashMap<String, String> output: check.getOutputs())
 			{
 				System.out.println(trans);
 				
 				if(output.get("address").equals(Utility.publicKeyToAddress(publicKey)))
-					amt = (Double) (output.get("amount"));
+					amt = Double.parseDouble(output.get("amount"));
 			}
 			
 		}
@@ -156,7 +155,7 @@ public class Blockchain implements Serializable
 	 */
 	public double getKeyBalance(TransactionPool pool, PublicKey publicKey)
 	{
-		
+		//THIS REALLY NEEDS TO BE LOOKED AT.   NO VERIFICATION OF TRANSACTIONS IN POOL
 		ArrayList<Block> chain = this.getChain();
 		ArrayList<Transaction> relevant = new ArrayList<Transaction>();
 		double amt = 0;
@@ -164,31 +163,38 @@ public class Blockchain implements Serializable
 		amt = this.getLastOutputBalance(keyString);
 		//System.out.println("last output: " + amt);
 		
-		
+		pool.sortByTimestamp();
 		ArrayList<Transaction> transactions = pool.getTransactionsFor(keyString);
 		long currentTS = 0;
 		for(Transaction t: transactions)
-		{	//System.out.println("***********\n" + t);
-			for(HashMap input: t.getInput())
+		{	
+			for(HashMap<String, String> output: t.getOutputs())
 			{
-				//System.out.println("##########\n" + input);
-				if( input.get("address").equals(keyString) && (Long)(input.get("timestamp"))>currentTS)
-				{
-					currentTS = (Long)(input.get("timestamp"));
-					//						if(t.verifyTransaction(t, this, pool))
-//						{
-					for(HashMap m : t.getOutputs())
-					{
-						if(m.get("address").equals(keyString))
-						{
-							System.out.println(m.get("amount"));
-							amt = (Double)(m.get("amount"));
-						}
-							
-					}
-				}
+				if(output.get("address").equals(keyString))
+					amt = Double.parseDouble(output.get("amount"));
 			}
 		}
+			//System.out.println("***********\n" + t);
+//			for(HashMap<String, String> input: t.getInput())
+//			{
+//				//System.out.println("##########\n" + input);
+//				if( input.get("address").equals(keyString) && (Long)(input.get("timestamp"))>currentTS)
+//				{
+//					currentTS = (Long)(input.get("timestamp"));
+//					//						if(t.verifyTransaction(t, this, pool))
+////						{
+//					for(HashMap<String, String> m : t.getOutputs())
+//					{
+//						if(m.get("address").equals(keyString))
+//						{
+//							System.out.println(m.get("amount"));
+//							amt = (Double)(m.get("amount"));
+//						}
+//							
+//					}
+//				}
+//			}
+//		}
 	
 		return amt;
 	}

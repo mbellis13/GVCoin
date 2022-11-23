@@ -42,6 +42,8 @@ import javax.swing.border.Border;
 
 public class FullNodeServer extends JFrame
 {
+	
+	
 	private Blockchain chain;
 	private Wallet wallet;
 	private TransactionPool pool;
@@ -72,14 +74,16 @@ public class FullNodeServer extends JFrame
 	public FullNodeServer(ArrayList<KeyPair> keys,ArrayList<KeyPair> spent,
 			Blockchain block,String uname,AESencryption en) throws NoSuchAlgorithmException, FileNotFoundException
 	{
+
 		encrypter = en;
 		username = uname;
 		pending = new ArrayList<Transaction>();
 		wallet = new Wallet(keys,spent,this);
 		chain = block;
 		pool = new TransactionPool();
-		p2p = new P2pServer(chain, pool);
+		p2p = new P2pServer(chain, pool,this);
 		miner = new Miner(chain, pool,wallet,p2p);
+		
 		this.setLayout(new GridBagLayout());
 		this.setBounds(200,200,800,500);
 		this.setTitle("GVCoin Full Node");
@@ -150,7 +154,7 @@ public class FullNodeServer extends JFrame
 				}
 
 				pool.updateOrAddTransaction(t);	
-
+				p2p.sendAddTransaction(t);
 				txt_to.setText("");
 				txt_amt.setText("");
 				lbl_balance.setText("GVC"+wallet.calculateBalance(miner.getChain(),miner.getPool()));
@@ -257,6 +261,7 @@ public class FullNodeServer extends JFrame
 			}
 		
 		});
+		p2p.requestChain();
 		lbl_balance.setText("GVC"+wallet.calculateBalance(miner.getChain(),miner.getPool()));
 		lbl_balance.repaint();
 		this.setVisible(true);
@@ -267,6 +272,12 @@ public class FullNodeServer extends JFrame
 		return mining;
 	}
 
+	
+	public void update()
+	{
+		lbl_balance.setText("GVC"+wallet.calculateBalance(miner.getChain(),miner.getPool()));
+	}
+	
 	public void updateWallet(String keys) throws FileNotFoundException
 	{
 		File outFile = new File(username + ".txt");
@@ -366,6 +377,7 @@ public class FullNodeServer extends JFrame
 		{
 			System.out.println("no existing blockchain found");
 		}
+		
 		new FullNodeServer(keys,spent, block,name,encrypter);
 	}
 }

@@ -125,7 +125,7 @@ public class TransactionPool
 		{	
 			System.out.println(t);
 			boolean add = false;
-			for(HashMap output: t.getOutputs())
+			for(HashMap<String, String> output: t.getOutputs())
 			{
 				if(output.get("address").equals(from))
 					add = true;
@@ -150,15 +150,15 @@ public class TransactionPool
 			{
 				Transaction t1 = pool.get(min);
 				Transaction t2 = pool.get(j);
-				long ts1= (Long) (t1.getInput().get(0).get("timestamp"));
-				long ts2 = (Long) (t2.getInput().get(0).get("timestamp"));
+				long ts1= Long.parseLong (t1.getInput().get(0).get("timestamp"));
+				long ts2 = Long.parseLong(t2.getInput().get(0).get("timestamp"));
 				
 				
-				HashMap inputs= t1.getInput().get(0);
-				ts1 = (Long)(inputs.get("timestamp"));
+				HashMap<String, String> inputs= t1.getInput().get(0);
+				ts1 = Long.parseLong(inputs.get("timestamp"));
 				
-				HashMap inputs2= t2.getInput().get(0);
-				ts2 = (Long)(inputs2.get("timestamp"));
+				HashMap<String, String> inputs2= t2.getInput().get(0);
+				ts2 = Long.parseLong(inputs2.get("timestamp"));
 				
 				if(ts2 < ts1)
 				{
