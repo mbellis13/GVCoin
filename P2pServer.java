@@ -35,7 +35,7 @@ public class P2pServer
 	public P2pServer(Blockchain chain, TransactionPool pool, FullNodeServer n)
 	{
 		node = n;
-		//neighbors.add("192.168.1.172");
+		neighbors.add("10.30.41.59");
 		this.chain = chain;
 		this.pool = pool;
 		try {
@@ -75,6 +75,7 @@ public class P2pServer
 	 */
 	public void syncChain()
 	{
+		//System.out.println("sending syncChain");
 		broadcastMessage(new Message(Message.Message_Type.REPLACE_CHAIN, chain.getChain(), null,null));
 		
 	}
@@ -84,6 +85,7 @@ public class P2pServer
 	 */
 	public void requestChain()
 	{
+		//System.out.println("sending requestChain");
 		broadcastMessage(new Message(Message.Message_Type.REQUEST_CHAIN, null, null,null));
 		
 	}
@@ -94,6 +96,7 @@ public class P2pServer
 	 */
 	public void sendAddTransaction(Transaction t)
 	{
+		//System.out.println("sending addTransaction");
 		broadcastMessage(new Message(Message.Message_Type.ADD_TRANS, null, t,null));
 	}
 	/**
@@ -102,6 +105,7 @@ public class P2pServer
 	 */
 	public void clearPool(ArrayList<Transaction> data)
 	{
+		//System.out.println("sending clearPool");
 		broadcastMessage(new Message(Message.Message_Type.CLEAR_TRANS,null,null,data));
 	}
 	
@@ -111,13 +115,15 @@ public class P2pServer
 	 */
 	public static void broadcastMessage(Message message) 
 	{
+		//System.out.println("broadcasting");
 		for(String addr: neighbors)
 		{
+			//System.out.println("sending to: " + addr);
 			
 			Socket s;
 			try {
-				//************************************CHANGE PORT TO 38013
-				s = new Socket(addr,38012);
+				
+				s = new Socket(addr,38013);
 			
 			
 				ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
@@ -174,7 +180,11 @@ class ServerServing implements Runnable
 				System.out.println("server accepted client");
 				String addr = client.getRemoteSocketAddress().toString().split(":")[0].substring(1);
 				if(!neighbors.contains(addr))
+				{
+					System.out.println("neighbor added");
 					neighbors.add(addr);
+				}
+					
 				System.out.println(neighbors);
 				Handler listener = new Handler(client,chain, pool,messages_received, node);
 				
@@ -226,7 +236,7 @@ class Handler implements Runnable
 		try
 		{
 					
-			System.out.print("Message Received: ");
+			//System.out.print("Message Received: ");
 			ObjectInputStream in = new ObjectInputStream(listener.getInputStream());
 			Message message;
 			
