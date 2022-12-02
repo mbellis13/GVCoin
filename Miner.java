@@ -1,12 +1,13 @@
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
-
-import javax.swing.JLabel;
+import java.util.ArrayList;
+import java.util.Date;
 
 
 /**
@@ -17,41 +18,91 @@ import javax.swing.JLabel;
 public class Miner 
 {
 
-	private Blockchain chain;
-	private TransactionPool pool;
-	private Wallet wallet;
-	private P2pServer server;
-	
-	public Miner(Blockchain bc, TransactionPool tp, Wallet w, P2pServer p2p)
-	{
-		chain = bc;
-		pool = tp;
-		wallet = w;
-		server = p2p;
-	}
-	
-	public Block mine(FullNodeServer fns) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException, FileNotFoundException
-	{
-		
-		Block block = chain.addBlock(pool,server,wallet,fns);
-		server.syncChain();
+	private boolean stopMining;
 
+	
+	
+	public Miner()
+	{
+		stopMining = false;
+
+	}
+	
+	
+	
+	/**
+	 * Calculates hashes to unlock a block
+	 * @param bc  blockchain
+	 * @param pool  transaction pool
+	 * @param p2p  Peer to peer server
+	 * @param w  current user's wallet
+	 * @param fns  current FullNodeServer running
+	 * @return  returns the unlocked block
+	 * @throws NoSuchAlgorithmException
+	 * @throws InvalidKeyException
+	 * @throws SignatureException
+	 * @throws UnsupportedEncodingException
+	 * @throws InvalidKeySpecException
+	 * @throws NoSuchProviderException
+	 * @throws FileNotFoundException
+	 */
+	public Block mineBlock(Blockchain chain, KeyPair key, ArrayList<Transaction> data) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException, FileNotFoundException {
 		
-		return block;
+		//may want to remove mining manipulation to main class
+		//did not clear pool or send messages
+		
+
+		String hash;
+		long timestamp =0;
+		Block lastBlock = null;
+		String lastHash = null;
+		int difficulty=4;
+		long nonce = 0;
+		Date d = new Date();
+		data.add(Transaction.getMiningRewardTransaction(Utility.publicKeyToAddress(key.getPublic())));
+		lastBlock = chain.getLastBlock();
+		lastHash = lastBlock.getHash();
+		do {
+			nonce++;
+
+			if(!chain.getLastBlock().toString().equals(lastBlock.toString()))
+			{
+				return null;
+			}
+
+			timestamp = d.getTime();
+			difficulty = Block.adjustDifficulty(lastBlock,timestamp);
+			hash = getHash(timestamp, lastHash, data, nonce, difficulty);
+			
+		}while(!hash.substring(0,difficulty).equals(new String(new char[difficulty]).replace("\0","a"))&&
+				!stopMining);
+		if(stopMining)
+		{
+			stopMining = false;
+			return null;
+		}
+			
+		
+		System.out.println("NEW BLOCK UNLOCKED: DIFFICULTY: " + difficulty + " time: " + timestamp);
+		return new Block(timestamp, lastHash, hash, data, nonce, difficulty);
 	}
 	
-	public TransactionPool getPool()
+	/**
+	 * calculates hash for a given set of data
+	 * @param ts timestamp
+	 * @param lh last hash
+	 * @param data List of transactions
+	 * @param n nonce
+	 * @param d difficulty
+	 * @return
+	 * @throws NoSuchAlgorithmException
+	 */
+	public String getHash(long ts, String lh, ArrayList<Transaction> data, long n, int d) throws NoSuchAlgorithmException
 	{
-		return pool;
+		String input = "" + ts + lh + data + n + d;
+		return Utility.toHexString(Utility.getSHA(input));
 	}
 	
-	public Blockchain getChain()
-	{
-		return chain;
-	}
 	
-	public Wallet getWallet()
-	{
-		return wallet;
-	}
+
 }

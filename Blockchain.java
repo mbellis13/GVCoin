@@ -1,17 +1,10 @@
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PublicKey;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 
 /**
@@ -96,13 +89,13 @@ public class Blockchain implements Serializable
 				
 				for(Transaction t : b.getData()) 
 				{
-					for(HashMap<String, String> m: t.getOutputs())
+					for(Output m: t.getOutputs())
 					{
 						
-						if(m.get("address").equals(pubKey))
+						if(m.getAddress().equals(pubKey))
 						{
 	
-							return Double.parseDouble(m.get("amount"));
+							return m.getAmount();
 						}
 					}
 				}
@@ -113,40 +106,7 @@ public class Blockchain implements Serializable
 	}
 	
 	
-	public double getKeyBalanceForVerification(TransactionPool pool, PublicKey publicKey, Transaction trans)
-	{
-		
-		pool.sortByTimestamp();
-		ArrayList<Block> chain = this.getChain();
-		String keyString = Utility.publicKeyToAddress(publicKey);
-		ArrayList<Transaction> relevant = pool.getTransactionsFor(keyString);
-		
 
-		double amt = 0;
-		amt = this.getLastOutputBalance(keyString);
-
-
-
-		//TRANSACTION POOL SORTED, CALCULATE FROM HERE
-		
-		for(int i = 0; i< relevant.size(); i++)
-		{
-			Transaction check = relevant.get(i);
-			if(check.getID().equals(trans.getID()))
-				break;
-			
-			for(HashMap<String, String> output: check.getOutputs())
-			{
-				System.out.println(trans);
-				
-				if(output.get("address").equals(Utility.publicKeyToAddress(publicKey)))
-					amt = Double.parseDouble(output.get("amount"));
-			}
-			
-		}
-		
-		return amt;
-	}
 	
 	
 	
@@ -156,76 +116,30 @@ public class Blockchain implements Serializable
 	public double getKeyBalance(TransactionPool pool, PublicKey publicKey)
 	{
 		//THIS REALLY NEEDS TO BE LOOKED AT.   NO VERIFICATION OF TRANSACTIONS IN POOL
-		ArrayList<Block> chain = this.getChain();
-		ArrayList<Transaction> relevant = new ArrayList<Transaction>();
+		//ArrayList<Block> chain = this.getChain();
+		//ArrayList<Transaction> relevant = new ArrayList<Transaction>();
 		double amt = 0;
 		String keyString = Utility.publicKeyToAddress(publicKey);
 		amt = this.getLastOutputBalance(keyString);
-		//System.out.println("last output: " + amt);
+
 		
 		pool.sortByTimestamp();
 		ArrayList<Transaction> transactions = pool.getTransactionsFor(keyString);
-		long currentTS = 0;
 		for(Transaction t: transactions)
 		{	
-			for(HashMap<String, String> output: t.getOutputs())
+			
+			for(Output output: t.getOutputs())
 			{
-				if(output.get("address").equals(keyString))
-					amt = Double.parseDouble(output.get("amount"));
+				if(output.getAddress().equals(keyString))
+					amt = output.getAmount();
 			}
 		}
-			//System.out.println("***********\n" + t);
-//			for(HashMap<String, String> input: t.getInput())
-//			{
-//				//System.out.println("##########\n" + input);
-//				if( input.get("address").equals(keyString) && (Long)(input.get("timestamp"))>currentTS)
-//				{
-//					currentTS = (Long)(input.get("timestamp"));
-//					//						if(t.verifyTransaction(t, this, pool))
-////						{
-//					for(HashMap<String, String> m : t.getOutputs())
-//					{
-//						if(m.get("address").equals(keyString))
-//						{
-//							System.out.println(m.get("amount"));
-//							amt = (Double)(m.get("amount"));
-//						}
-//							
-//					}
-//				}
-//			}
-//		}
+
 	
 		return amt;
 	}
 	
-	/**
-	 * attempts to mine a block and add to the chain
-	 * @param pool current transaction pool
-	 * @param p2p peer 2 peer server
-	 * @param w current user's wallet
-	 * @param fns current running full node
-	 * @return
-	 * @throws NoSuchAlgorithmException
-	 * @throws InvalidKeyException
-	 * @throws SignatureException
-	 * @throws UnsupportedEncodingException
-	 * @throws InvalidKeySpecException
-	 * @throws NoSuchProviderException
-	 * @throws FileNotFoundException
-	 */
-	public Block addBlock(TransactionPool pool, P2pServer p2p,
-			Wallet w,FullNodeServer fns) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException, FileNotFoundException
-	{
-		Block b = Block.mineBlock(this, pool,p2p,w,fns);
-		if(b != null)
-			{
-			chain.add(b);
-			}
-		//System.out.print(chain);
-		backupChain();
-		return b;
-	}
+
 	
 	/**
 	 * validates a blockchain
@@ -233,7 +147,7 @@ public class Blockchain implements Serializable
 	 * @return
 	 * @throws NoSuchAlgorithmException
 	 */
-	public boolean isValidChain(ArrayList<Block> chain) throws NoSuchAlgorithmException
+	private boolean isValidChain(ArrayList<Block> chain) throws NoSuchAlgorithmException
 	{
 		if(!chain.get(0).toString().equals(Block.genesis().toString()))
 		{
@@ -244,14 +158,14 @@ public class Blockchain implements Serializable
 		{
 			Block block = chain.get(i);
 			Block lastBlock = chain.get(i-1);
-			if(!block.getLastHash().equals(lastBlock.getHash()) || !block.getHash().equals(Block.blockHash(block)))
+			if(!block.getLastHash().equals(lastBlock.getHash()) || !block.getHash().equals(blockHash(block)))
 			{
 				return false;
 			}
-			if(block.getTime() - lastBlock.getTime() < this.MINE_RATE 
+			if(block.getTime() - lastBlock.getTime() < MINE_RATE 
 					&& block.getDifficulty() != lastBlock.getDifficulty()+1)
 				return false;
-			if(block.getTime() - lastBlock.getTime() > this.MINE_RATE 
+			if(block.getTime() - lastBlock.getTime() > MINE_RATE 
 					&& block.getDifficulty() != lastBlock.getDifficulty()-1)
 				return false;
 		}
@@ -282,6 +196,35 @@ public class Blockchain implements Serializable
 		backupChain();
 	}
 	
+	
+	
+	public void addBlock(Block block)
+	{
+		chain.add(block);
+		try {
+			if(!this.isValidChain(chain))
+				chain.remove(block);
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	
+	/**
+	 * calculates hash for a given block
+	 * @param b
+	 * @return
+	 * @throws NoSuchAlgorithmException
+	 */
+	private String blockHash(Block b) throws NoSuchAlgorithmException
+	{
+		String input = "" +b.getTime() +b.getLastHash() + b.getData() + b.getNonce() + b.getDifficulty();
+		return Utility.toHexString(Utility.getSHA(input));
+	}
+	
+	
+	
 	/**
 	 * returns blockchain as a string
 	 * @return
@@ -295,6 +238,8 @@ public class Blockchain implements Serializable
 		}
 		return resp;
 	}
+	
+	
 	
 	/**
 	 * returns the blocks in the chain

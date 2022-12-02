@@ -1,12 +1,7 @@
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
+
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.Arrays;
+
 
 public class TransactionPool 
 {
@@ -32,8 +27,8 @@ public class TransactionPool
 		
 		for(Transaction t : pool)
 		{
-			if(t.getInput().size() == 1 &&
-			t.getInput().get(0).get("address").equals(address))
+			if(t.getInputs().size() == 1 &&
+			t.getInputs().get(0).getAddress().equals(address))
 				return t;
 		}
 		return null;
@@ -70,31 +65,23 @@ public class TransactionPool
 	}
 	
 	
-	/**
-	 * returns list of valid transactions from transaction pool
-	 * @param chain
-	 * @return
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 * @throws SignatureException
-	 * @throws UnsupportedEncodingException
-	 * @throws InvalidKeySpecException
-	 * @throws NoSuchProviderException
-	 */
-	public ArrayList<Transaction> validTransactions(Blockchain chain) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException
-	{
-		this.sortByTimestamp();
-		ArrayList<Transaction> valid = new ArrayList<Transaction>();
-		for(Transaction t : pool)
-		{
-			if(Transaction.verifyTransaction(t,chain,this))
-				valid.add(t);
-			else
-				System.out.println("invalid transaction: " + t.getID());
-		}
-		
-		return valid;
-	}
+	
+//	public ArrayList<Transaction> getValidTransactions(Blockchain chain)
+//	{
+//		this.sortByTimestamp();
+//		ArrayList<Transaction> valid = new ArrayList<Transaction>();
+//		for(Transaction t : pool)
+//		{
+//			if(Transaction.verifyTransaction(t,chain,this))
+//				valid.add(t);
+//			else
+//				System.out.println("invalid transaction: " + t.getID());
+//		}
+//		
+//		return valid;
+//	}
+	
+	
 	
 	/**
 	 * removes transactions from pool which have been included in a block
@@ -123,11 +110,10 @@ public class TransactionPool
 		
 		for(Transaction t: pool)
 		{	
-			System.out.println(t);
 			boolean add = false;
-			for(HashMap<String, String> output: t.getOutputs())
+			for(Output output: t.getOutputs())
 			{
-				if(output.get("address").equals(from))
+				if(output.getAddress().equals(from))
 					add = true;
 			}
 			if(add) 
@@ -143,31 +129,65 @@ public class TransactionPool
 	public void sortByTimestamp()
 	{
 
-		for(int i = 0; i < pool.size()-1; i++)
-		{
-			int min = i;
-			for(int j = i+1; j < pool.size(); j++)
-			{
-				Transaction t1 = pool.get(min);
-				Transaction t2 = pool.get(j);
-				long ts1= Long.parseLong (t1.getInput().get(0).get("timestamp"));
-				long ts2 = Long.parseLong(t2.getInput().get(0).get("timestamp"));
-				
-				
-				HashMap<String, String> inputs= t1.getInput().get(0);
-				ts1 = Long.parseLong(inputs.get("timestamp"));
-				
-				HashMap<String, String> inputs2= t2.getInput().get(0);
-				ts2 = Long.parseLong(inputs2.get("timestamp"));
-				
-				if(ts2 < ts1)
-				{
-					min = j;
-				}
-			}
-			Collections.swap(pool, i, min);
-		}
+		Transaction[] transactions = (Transaction[]) pool.toArray();
+		mergeSortByTimestamp(transactions);
+		pool = new ArrayList<Transaction>(Arrays.asList(transactions));
+		
 	}
+	
+	
+	/**
+	 * helper method to sort by timestamp
+	 * @param list
+	 */
+	private void mergeSortByTimestamp(Transaction[] list)
+	{
+		if(list.length <= 1)
+			return;
+		Transaction[] left = new Transaction[list.length/2];
+		Transaction[] right = new Transaction[list.length - left.length];
+		
+		for(int i = 0; i < left.length; i++)
+		{
+			left[i] = list[i];
+			right[i] = list[left.length + i];
+		}
+		right[right.length - 1] = list[list.length -1];
+		
+		mergeSortByTimestamp(left);
+		mergeSortByTimestamp(right);
+		
+		int leftIndex = 0;
+		int rightIndex = 0;
+		
+		for(int i = 0; i < list.length; i++)
+		{
+			if(leftIndex >= left.length)
+			{
+				list[i]=right[rightIndex];
+				rightIndex++;
+			}
+			else if(rightIndex >= right.length)
+			{
+				list[i] = left[leftIndex];
+				leftIndex++;
+			}
+			else if(left[leftIndex].getTimestamp()<=right[rightIndex].getTimestamp())
+			{
+				list[i]=left[leftIndex];
+				leftIndex++;
+			}
+			else
+			{
+				list[i] = right[rightIndex];
+				rightIndex++;
+			}
+		}
+		
+		
+	}
+	
+	
 	
 	public String toString()
 	{
@@ -177,5 +197,12 @@ public class TransactionPool
 			resp += "\n\t" + t;
 		}
 		return resp;
+	}
+
+
+
+
+	public ArrayList<Transaction> getPool() {
+		return pool;
 	}
 }

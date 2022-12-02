@@ -2,20 +2,14 @@ import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.UUID;
 
 
@@ -29,9 +23,9 @@ public class Transaction implements Serializable
 	private static final long serialVersionUID = 134031190761313L;
 	
 	private String id;
-	private ArrayList<HashMap<String, String>> inputs;
-	private String recipient;
-	private ArrayList<HashMap<String, String>> outputs;
+	private ArrayList<Input> inputs;
+	private ArrayList<Output> outputs;
+	private long timestamp;
 
 	
 	
@@ -40,43 +34,14 @@ public class Transaction implements Serializable
 	 * @param ip input HashMap<String, String>
 	 * @param op output ArrayList
 	 */
-	public Transaction(ArrayList<HashMap<String, String>> ip, ArrayList<HashMap<String, String>> op, String r)
+	public Transaction(ArrayList<Input> ip, ArrayList<Output> op)
 	{
 		id = UUID.randomUUID().toString();
 		Date d = new Date();
+		timestamp = d.getTime();
 		inputs = ip;
 		outputs = op;	
-		recipient = r;
 	}
-	
-	/**
-	 * creates mining reward
-	 * @param w  current user's wallet
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	public static Transaction miningRewardTransaction(Wallet w) throws FileNotFoundException
-	{
-		HashMap<String, String> ip = new HashMap<String, String>();
-		Date d = new Date();
-		ip.put("amount", ""+Blockchain.MINING_REWARD);
-		ip.put("timestamp",""+d.getTime());
-		ip.put("address","mining reward");
-		ip.put("signature","mining reward");
-		ArrayList<HashMap<String, String>> ips = new ArrayList<HashMap<String, String>>();
-		ips.add(ip);
-		
-		PublicKey key = w.generateNewKey();
-		String r = Utility.publicKeyToAddress(key);
-		
-		ArrayList<HashMap<String, String>> op = new ArrayList<HashMap<String, String>>();
-		HashMap<String, String> op1 = new HashMap<String, String>();
-		op1.put("amount", ""+Blockchain.MINING_REWARD);
-		op1.put("address",r);
-		op.add(op1);
-		return new Transaction(ips,op,r);
-	}
-	
 	
 	
 	/**
@@ -92,89 +57,53 @@ public class Transaction implements Serializable
 	 * @throws NoSuchProviderException 
 	 * @throws InvalidKeySpecException 
 	 */
-	public Transaction(KeyPair key,Blockchain bc, TransactionPool pool, String[] recipient, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException 
+	public Transaction(KeyPair key,double senderBalance, String recipient, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException 
 	{
-		if (amount > bc.getKeyBalance(pool, key.getPublic()))
+		if (amount > senderBalance)
 		{
 			throw new IllegalArgumentException("amount: " + amount + "exceeds balance.");
 		}
-		this.recipient = recipient[0];
-		double recipientBalance = bc.getKeyBalance(pool, Utility.retrievePublicKey(this.recipient));
+
 		
-		outputs = new ArrayList<HashMap<String, String>>();
-		HashMap<String, String> op1 = new HashMap<String, String>();
-		op1.put("amount","0.0");// bc.getKeyBalance(pool,key.getPublic()) - amount);
-		op1.put("address",Utility.publicKeyToAddress(key.getPublic()));
+		outputs = new ArrayList<Output>();
+		Output op1 = new Output(Utility.publicKeyToAddress(key.getPublic()), senderBalance - amount);
 		outputs.add(op1);
 		
-		HashMap<String, String> op2 = new HashMap<String, String>();
-		op2.put("amount",(amount + recipientBalance)+"");
-		op2.put("address",recipient[0]);
+		Output op2 = new Output(recipient, amount);
 		outputs.add(op2);
-		
-		if(recipient.length > 1) //index 0 for recipient, index 1 for change
-		{
-			HashMap<String, String> op3 = new HashMap<String, String>();
-			op3.put("amount",(bc.getKeyBalance(pool,key.getPublic()) - amount)+"");
-			op3.put("address",recipient[1]);
-			outputs.add(op3);
-		}
-		
-		
+
+
 		id = UUID.randomUUID().toString();
-		//input = new HashMap<String, String>();
-		Date d = new Date();
-//		input.put("amount", sender.getBalance());
-//		input.put("date",d.getTime());
-//		input.put("address", )
-//		input.put("signature",sender.sign(Utility.hash(outputs.toString())));
-		this.signTransaction(bc,key,pool);
-	}
+		this.signTransaction(senderBalance,key);
+	}	
+	
 	
 	
 	/**
-	 * Update an existing Transaction with a new output
-	 * @param sender sender's wallet object
-	 * @param recipientAddress recipient's public address
-	 * @param amount   number of coin to send
-	 * @return the updated Transaction or null if no Transaction found
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 * @throws SignatureException
-	 * @throws UnsupportedEncodingException
+	 * creates mining reward
+	 * @param w  current user's wallet
+	 * @return
+	 * @throws FileNotFoundException
 	 */
-	public Transaction update(KeyPair key,Blockchain bc, TransactionPool pool, String recipientAddress, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
+	public static Transaction getMiningRewardTransaction(String publicKey) throws FileNotFoundException
 	{
-		HashMap<String, String> senderOutput = null;
-		//System.out.println("size: " + outputs.size());
-		for(HashMap<String, String> map : outputs)
-		{
-			if(map.get("address").equals(Utility.publicKeyToAddress(key.getPublic())))
-			{
-				senderOutput = map;
-			}
-		}
-
+		//Generate inputs
+		ArrayList<Input> ips = new ArrayList<Input>();
+		ips.add(new Input("mining reward",Blockchain.MINING_REWARD,"mining reward"));
 		
-		if(amount > Double.parseDouble(senderOutput.get("amount")))
-		{
-			System.out.println("Amount: " + amount+ " exceeds available coins");
-		}
-		else
-		{
-			senderOutput.replace("amount", (Double.parseDouble(senderOutput.get("amount")) - amount)+"");
-			
-			HashMap<String, String> n = new HashMap<String, String>();
-			n.put("amount",amount+"");
-			n.put("address", recipientAddress);
-			this.outputs.add(n);
-			this.signTransaction(bc,key,pool);
-			
-			return this;
-		}
-		return null;
-		
+		//generate outputs
+		ArrayList<Output> op = new ArrayList<Output>();
+		Output op1 = new Output(publicKey,Blockchain.MINING_REWARD);
+		op.add(op1);
+		return new Transaction(ips,op);
 	}
+	
+	
+	
+
+	
+	
+
 	
 	
 	/**
@@ -185,15 +114,10 @@ public class Transaction implements Serializable
 	 * @throws SignatureException
 	 * @throws UnsupportedEncodingException
 	 */
-	public void signTransaction(Blockchain bc, KeyPair key, TransactionPool pool) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
+	public void signTransaction(double currentBalance, KeyPair key) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
 	{
-		inputs = new ArrayList<HashMap<String, String>>();
-		HashMap<String, String> input = new HashMap<String, String>();
-		Date d = new Date();
-		input.put("amount", ""+bc.getKeyBalance(pool, key.getPublic()));
-		input.put("timestamp",""+d.getTime());
-		input.put("address",Utility.publicKeyToAddress(key.getPublic()));
-		input.put("signature",Utility.sign(Utility.hash(outputs.toString()),key.getPrivate()));
+		inputs = new ArrayList<Input>();
+		Input input = new Input(Utility.publicKeyToAddress(key.getPublic()),currentBalance,Utility.sign(Utility.hash(outputs.toString()),key.getPrivate()));
 		inputs.add(input);
 	}
 	
@@ -209,17 +133,14 @@ public class Transaction implements Serializable
 	 * @throws SignatureException
 	 * @throws UnsupportedEncodingException
 	 */
-	public static HashMap<String, String> generateInput(KeyPair key, ArrayList<HashMap<String, String>> outputs, Blockchain bc, TransactionPool pool) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
+	public static Input generateInput(KeyPair key, ArrayList<Output> outputs, double currentBalance) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
 	{
-		HashMap<String, String> input = new HashMap<String, String>();
-		Date d = new Date();
-		input.put("amount", ""+bc.getKeyBalance(pool, key.getPublic()));
-		input.put("timestamp",""+d.getTime());
-		input.put("address",Utility.publicKeyToAddress(key.getPublic()));
-		input.put("signature",Utility.sign(Utility.hash(outputs.toString()),key.getPrivate()));
+		Input input = new Input(Utility.publicKeyToAddress(key.getPublic()),currentBalance,Utility.sign(Utility.hash(outputs.toString()),key.getPrivate()));
 		return input;
 	}
 	
+	
+
 	
 	/**
 	 * Verify's that the Transaction t is valid and
@@ -233,53 +154,74 @@ public class Transaction implements Serializable
 	 * @throws InvalidKeySpecException
 	 * @throws NoSuchProviderException
 	 */
-	public static boolean verifyTransaction(Transaction t, Blockchain bc,TransactionPool pool) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException
+	public boolean verifyTransaction(Blockchain bc,TransactionPool pool) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException
 	{
 		
 			
-		//System.out.println("TEST\n" + t);
-		//System.out.println("one" + "\n"+t);
-		double totalInput = bc.getKeyBalanceForVerification(pool, Utility.retrievePublicKey(t.getRecipient()), t);
-		System.out.println("dest bal: " + totalInput);
-		for(HashMap<String, String> input: t.getInput())
+		
+		Input senderInput = this.getInputs().get(0);
+		
+		double chainBalance = bc.getLastOutputBalance(senderInput.getAddress());
+		pool.sortByTimestamp();
+		ArrayList<Transaction> pendingTransactions = pool.getTransactionsFor(senderInput.getAddress());
+		
+		if(pendingTransactions.size() > 0)
 		{
-			PublicKey key = Utility.retrievePublicKey((String)(input.get("address")));
-			if(Double.parseDouble(input.get("amount"))!=bc.getKeyBalanceForVerification(pool, key, t))
+			Transaction lastInPool = pendingTransactions.get(pendingTransactions.size()-1);
+			ArrayList<Output> outputs = lastInPool.getOutputs();
+			int count = 0;
+			for(Output output: outputs)
+			{
+				
+				if(output.getAddress().equals(senderInput.getAddress()))
 				{
-				System.out.println("input: " + input.get("amount"));
-				System.out.println("balance: " + bc.getKeyBalanceForVerification(pool, key, t));
-				System.out.println("ONE");
-				return false;}
-			totalInput += Double.parseDouble(input.get("amount"));
+					count++;
+				
+					if (output.getAmount()!=senderInput.getAmount())
+						return false;	
+				}
+				if(count>1)
+					return false;
+			}
 		}
+		else
+		{
+			if(chainBalance != senderInput.getAmount())
+				return false;
+		}
+		
+		
+		
+		
 			
 		double totalOutput = 0;
-		for(HashMap<String, String> h: t.outputs)
-			totalOutput += Double.parseDouble(h.get("amount"));
 		
-		if(totalInput != totalOutput)
-			{System.out.println("TWO");return false;}
-		if(t.getInput().get(0).get("address").equals("mining_reward") && 
-				Double.parseDouble(t.getInput().get(0).get("address"))==Blockchain.MINING_REWARD &&
-				t.getInput().size() == 1 && t.getOutputs().size()==1)	
-			return true;
+		for(Output output: outputs)
+			totalOutput += output.getAmount();
+		
+		if(senderInput.getAmount() != totalOutput)
+			{return false;}
+//		Don't think we need to verify mining reward transaction since added by miner
+//		if(senderInput.getAddress().equals("mining_reward") && 
+//				sendInput.getAmount()==Blockchain.MINING_REWARD &&
+//				inputs.size() == 1 && outputs.size()==1)	
+//			return true;
 		
 		
 				
 				
 				
 		boolean signaturesVerified = true;
-		for(HashMap<String, String> input:t.getInput())
+		for(Input input: inputs)
 		{
-			PublicKey key = Utility.retrievePublicKey((String)(input.get("address")));
-			if(!Utility.verifySignature(key, Utility.hash(t.outputs.toString()), (String)(input.get("signature"))))
-				{System.out.println("three");signaturesVerified = false;}
+			PublicKey key = Utility.retrievePublicKey((String)(input.getAddress()));
+			if(!Utility.verifySignature(key, Utility.hash(this.outputs.toString()), input.getSignature()))
+				{signaturesVerified = false;}
 		}
 		return signaturesVerified;
 		
 		//Utility.verifySignature(key, Utility.hash(t.outputs.toString()), (String)(t.input.get("signature")));
 	}
-	
 	
 
 	
@@ -292,7 +234,7 @@ public class Transaction implements Serializable
 						"\n\tid     : " + id +
 						"\n\tinput  : " + inputs +
 						"\n\toutput : ";
-		for(int i = 0; i < outputs.size(); i++)
+		for(int i = 0; i<outputs.size(); i++)
 		{
 			resp += "\n\t" + outputs.get(i);
 		}
@@ -300,27 +242,28 @@ public class Transaction implements Serializable
 	}
 	
 	
-	
-	
 	public String getID()
 	{
 		return id;
 	}
 	
-	public ArrayList<HashMap<String, String>> getInput()
+	public ArrayList<Input> getInputs()
 	{
 		return inputs;
 	}
 	
-	public ArrayList<HashMap<String, String>> getOutputs()
+	public ArrayList<Output> getOutputs()
 	{
 		return outputs;
 	}
-	
-	public String getRecipient()
-	{
-		return recipient;
+
+	/**
+	 * @return the timestamp
+	 */
+	public long getTimestamp() {
+		return timestamp;
 	}
+	
 	
 
 

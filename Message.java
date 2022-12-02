@@ -12,7 +12,7 @@ public class Message implements Serializable
 {
 	private static final long serialVersionUID = 405131190761313L;
 	
-	enum Message_Type{
+	enum Type{
 		REPLACE_CHAIN,//call replace_chain
 		REQUEST_CHAIN,//request current chain
 		ADD_TRANS,//call updateOrAdd
@@ -21,16 +21,16 @@ public class Message implements Serializable
 		//NEW_NEIGHBOR
 	}
 	
-	public String id;
-	public long timestamp;
-	public ArrayList<Block> chain;
-	public Transaction transaction;
-	public Message_Type type;
-	public ArrayList<Transaction> transactions;
+	private String id;
+	private long timestamp;
+	private ArrayList<Block> chain;
+	private Transaction transaction;
+	private Type type;
+	private ArrayList<Transaction> transactions;
 	
 
 	
-	public Message(Message_Type t, ArrayList<Block> c, Transaction tr, ArrayList<Transaction> trans)
+	public Message(Type t, ArrayList<Block> c, Transaction tr, ArrayList<Transaction> trans)
 	{
 		type = t;
 		timestamp = new Date().getTime();
@@ -38,5 +38,59 @@ public class Message implements Serializable
 		transaction = tr;
 		transactions = trans;
 		id = UUID.randomUUID().toString();
+	}
+
+
+
+	/**
+	 * @return the id
+	 */
+	public String getId() {
+		return id;
+	}
+
+
+
+	/**
+	 * @return the timestamp
+	 */
+	public long getTimestamp() {
+		return timestamp;
+	}
+
+
+
+	/**
+	 * @return the chain
+	 */
+	public ArrayList<Block> getChain() {
+		return chain;
+	}
+
+
+
+	/**
+	 * @return the transaction
+	 */
+	public Transaction getTransaction() {
+		return transaction;
+	}
+
+
+
+	/**
+	 * @return the type
+	 */
+	public Type getType() {
+		return type;
+	}
+
+
+
+	/**
+	 * @return the transactions
+	 */
+	public ArrayList<Transaction> getTransactions() {
+		return transactions;
 	}
 }

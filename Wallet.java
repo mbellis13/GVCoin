@@ -11,7 +11,7 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.HashMap;
+
 
 
 /**
@@ -25,8 +25,7 @@ public class Wallet
 	private ArrayList<KeyPair> outstandingPairs;
 	private ArrayList<KeyPair> spentPairs;
 	private ArrayList<Transaction> pending;
-	private double balance;
-	private FullNodeServer fullNode;
+
 
 	
 	
@@ -35,13 +34,12 @@ public class Wallet
 	 * @param fns current running full node 
 	 * @throws NoSuchAlgorithmException
 	 */
-	public Wallet(FullNodeServer fns) throws NoSuchAlgorithmException
+	public Wallet() throws NoSuchAlgorithmException
 	{
 		pending = new ArrayList<Transaction>();
-		balance = 0;
 		outstandingPairs = new ArrayList<KeyPair>();
 		spentPairs = new ArrayList<KeyPair>();
-		fullNode = fns;
+
 		
 		
 	}
@@ -51,12 +49,10 @@ public class Wallet
 	 * @param os outstading key pairs
 	 * @param fns
 	 */
-	public Wallet(ArrayList<KeyPair> os,ArrayList<KeyPair> s, FullNodeServer fns)
+	public Wallet(ArrayList<KeyPair> os,ArrayList<KeyPair> s)
 	{
 		pending = new ArrayList<Transaction>();
-		balance = 0;
 		outstandingPairs = os;
-		fullNode = fns;
 		spentPairs = s;
 	}
 	
@@ -69,6 +65,7 @@ public class Wallet
 	 */
 	public void addExistingPair(PublicKey pub, PrivateKey priv) throws FileNotFoundException
 	{
+		//No longer updates wallet text file
 		boolean alreadyExists = false;
 		for(KeyPair p : outstandingPairs)
 		{
@@ -77,15 +74,14 @@ public class Wallet
 		}
 		if(!alreadyExists)	
 			this.outstandingPairs.add(new KeyPair(pub,priv));
-		updateWallet();
 	}
 	
 	/**
-	 * writes outstanding key pairs to encrypted file for 
-	 * retreival on next run of program
+	 * returns string representation of key pairs
+	 * 
 	 * @throws FileNotFoundException
 	 */
-	public void updateWallet() throws FileNotFoundException
+	public String getWalletData() throws FileNotFoundException
 	{
 		String data = "";
 		for(KeyPair key: outstandingPairs)
@@ -106,7 +102,7 @@ public class Wallet
 			data += "\n";
 		}
 
-		fullNode.updateWallet(data);
+		return data;
 	}
 	
 	
@@ -115,8 +111,10 @@ public class Wallet
 	 * @return
 	 * @throws FileNotFoundException
 	 */
-	public PublicKey generateNewKey() throws FileNotFoundException
+	public KeyPair generateNewKey() throws FileNotFoundException
 	{
+		//no longer updates wallet text file
+		
 		KeyPairGenerator keyGen=null;
 		try {
 			keyGen = KeyPairGenerator.getInstance("EC");
@@ -125,11 +123,11 @@ public class Wallet
 		}
 		keyGen.initialize(256);
 		KeyPair newpair = keyGen.generateKeyPair();
-		PrivateKey privKey = newpair.getPrivate();
-		PublicKey pubKey = newpair.getPublic();
+		//PrivateKey privKey = newpair.getPrivate();
+		//PublicKey pubKey = newpair.getPublic();
 		outstandingPairs.add(newpair);
-		updateWallet();
-		return newpair.getPublic();
+
+		return newpair;
 		
 	}
 	
@@ -146,68 +144,42 @@ public class Wallet
 	 */
 	public Transaction generateTransactions(String destAddr,Blockchain bc, TransactionPool pool, double amt) throws InvalidKeySpecException, NoSuchProviderException
 	{	
-		ArrayList<HashMap<String, String>> inputs = new ArrayList<HashMap<String, String>>();
-		ArrayList<HashMap<String, String>> outputs = new ArrayList<HashMap<String, String>>();
+		ArrayList<Input> inputs = new ArrayList<Input>();
+		ArrayList<Output> outputs = new ArrayList<Output>();
 		ArrayList<KeyPair>keysForInputs = new ArrayList<KeyPair>();
-		ArrayList<Transaction> transactions = new ArrayList<Transaction>();
+		//ArrayList<Transaction> transactions = new ArrayList<Transaction>();
 		double lastAmt = 0;
 		double totalSending = amt;
 		
 		for(int i = 0; i < outstandingPairs.size(); i++)
 		{
 			KeyPair key = outstandingPairs.get(i);
-			double remaining = bc.getKeyBalance(pool, key.getPublic());
-			if(i == 0 && totalSending <= remaining)
-			{
-				PublicKey newKey = null;
-				try {
-					newKey = generateNewKey();
-				} catch (FileNotFoundException e1) {
-					e1.printStackTrace();
-				}
-				String[] transAddrs = {destAddr, Utility.publicKeyToAddress(newKey)};
-				try {
-					
-					Transaction t = new Transaction(key, bc, pool,transAddrs,totalSending );
-					return t;
-					
-					//i = outstandingPairs.size();
-				} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
-						| UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				
-				}
-
-			}
-			else if(totalSending <= remaining)
+			double remaining = bc.getKeyBalance(pool, key.getPublic());//****how to get complete key balance??
+			
+			//if the balance of this key is sufficient to finish transaction
+			if(totalSending <= remaining)
 			{
 				keysForInputs.add(key);
 				lastAmt = totalSending;
-				HashMap<String, String> op = new HashMap<String, String>();
-				op.put("amount","0");//remaining-lastAmt);
-				op.put("address",Utility.publicKeyToAddress(key.getPublic()));
+				Output op = new Output(Utility.publicKeyToAddress(key.getPublic()),0);
+				
 				outputs.add(op);
 				PublicKey newKey = null;
 				try {
-					newKey = generateNewKey();
+					newKey = generateNewKey().getPublic();
 				} catch (FileNotFoundException e1) {
 					e1.printStackTrace();
 				}
 				String changeAddr = Utility.publicKeyToAddress(newKey);
-				HashMap<String, String> change = new HashMap<String, String>();
-				change.put("amount", (remaining-lastAmt)+"");
-				change.put("address", changeAddr);
+				Output change = new Output(changeAddr,remaining-lastAmt);
 				outputs.add(change);
 				break;
 			}
-			else
+			else //use all of this key but need more keys
 			{
 				keysForInputs.add(key);
 				totalSending-=remaining;
-				HashMap<String, String> op = new HashMap<String, String>();
-				op.put("amount","0.0");
-				op.put("address",Utility.publicKeyToAddress(key.getPublic()));
+				Output op = new Output(Utility.publicKeyToAddress(key.getPublic()),0);
 				outputs.add(op);
 				
 				spentPairs.add(key);
@@ -217,14 +189,14 @@ public class Wallet
 		for(KeyPair key: spentPairs)
 			outstandingPairs.remove(key);
 		
-		HashMap<String, String> op1 = new HashMap<String, String>();
-		op1.put("address", destAddr);
-		op1.put("amount",""+amt);
+		Output op1 = new Output(destAddr, amt);
 		outputs.add(op1);
+		
 		for(KeyPair key: keysForInputs)
 		{	
+			
 			try {
-				inputs.add(Transaction.generateInput(key, outputs, bc, pool)); 
+				inputs.add(Transaction.generateInput(key, outputs, bc.getKeyBalance(pool, key.getPublic()))); 
 				
 			} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
 					| UnsupportedEncodingException e) {
@@ -235,7 +207,7 @@ public class Wallet
 			
 		}
 		
-		Transaction newTransaction = new Transaction(inputs,outputs,destAddr);
+		Transaction newTransaction = new Transaction(inputs,outputs);
 		pending.add(newTransaction);
 		return newTransaction;
 	}
@@ -280,10 +252,7 @@ public class Wallet
 		return keys;
 	}
 	
-	public double getBalance()
-	{
-		return balance;
-	}
+
 	
 	/**
 	 * removes transaction from pending if included on blockchain
@@ -323,7 +292,7 @@ public class Wallet
 	 */
 	public double calculateBalance(Blockchain bc, TransactionPool pool)
 	{
-		balance = 0;
+		double balance = 0;
 		for(KeyPair p : this.outstandingPairs)
 		{
 			PublicKey publicKey = p.getPublic();

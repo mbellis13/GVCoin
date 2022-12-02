@@ -1,15 +1,6 @@
-import java.io.FileNotFoundException;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
-
-import java.security.InvalidKeyException;
-
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.Date;
+
 
 
 
@@ -60,55 +51,7 @@ public class Block implements Serializable
 	}
 	
 	
-	/**
-	 * Calculates hashes to unlock a block
-	 * @param bc  blockchain
-	 * @param pool  transaction pool
-	 * @param p2p  Peer to peer server
-	 * @param w  current user's wallet
-	 * @param fns  current FullNodeServer running
-	 * @return  returns the unlocked block
-	 * @throws NoSuchAlgorithmException
-	 * @throws InvalidKeyException
-	 * @throws SignatureException
-	 * @throws UnsupportedEncodingException
-	 * @throws InvalidKeySpecException
-	 * @throws NoSuchProviderException
-	 * @throws FileNotFoundException
-	 */
-	public static Block mineBlock(Blockchain bc, TransactionPool pool,P2pServer p2p,
-			Wallet w, FullNodeServer fns) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException, FileNotFoundException {
-		String hash;
-		long timestamp =0;
-		Block lastBlock = null;
-		String lastHash = null;
-		int difficulty=4;
-		ArrayList<Transaction> data = null;
-		long nonce = 0;
-		Date d = new Date();
-		data = pool.validTransactions(bc);
-		data.add(Transaction.miningRewardTransaction(w));
-		lastBlock = bc.getLastBlock();
-		lastHash = lastBlock.getHash();
-		do {
-			nonce++;
-
-			if(!bc.getLastBlock().toString().equals(lastBlock.toString()))
-				{System.out.print("beat to the punch");return null;}
-
-			timestamp = d.getTime();
-			difficulty = Block.adjustDifficulty(lastBlock,timestamp);
-			hash = Block.hash(timestamp, lastHash, data, nonce, difficulty);
-			
-		}while(!hash.substring(0,difficulty).equals(new String(new char[difficulty]).replace("\0","a"))&&
-				fns.getMining());
-		if(!fns.getMining())
-			return null;
-		pool.clearPool(data);
-		p2p.clearPool(data);
-		System.out.println("NEW BLOCK UNLOCKED: DIFFICULTY: " + difficulty + " time: " + timestamp);
-		return new Block(timestamp, lastHash, hash, data, nonce, difficulty);
-	}
+	
 	
 	/**
 	 * sets current difficulty
@@ -123,33 +66,10 @@ public class Block implements Serializable
 	}
 	
 	
-	/**
-	 * calculates hash for a given block
-	 * @param b
-	 * @return
-	 * @throws NoSuchAlgorithmException
-	 */
-	public static String blockHash(Block b) throws NoSuchAlgorithmException
-	{
-		return hash(b.getTime(), b.getLastHash(),b.getData(), b.getNonce(), b.getDifficulty());
-	}
 	
 	
-	/**
-	 * calculates hash for a given set of data
-	 * @param ts timestamp
-	 * @param lh last hash
-	 * @param data List of transactions
-	 * @param n nonce
-	 * @param d difficulty
-	 * @return
-	 * @throws NoSuchAlgorithmException
-	 */
-	public static String hash(long ts, String lh, ArrayList<Transaction> data, long n, int d) throws NoSuchAlgorithmException
-	{
-		String input = "" + ts + lh + data + n + d;
-		return Utility.toHexString(Utility.getSHA(input));
-	}
+	
+
 	
 	
 	
@@ -183,6 +103,22 @@ public class Block implements Serializable
 	public int getDifficulty()
 	{
 		return difficulty;
+	}
+	
+	@Override
+	public boolean equals(Object otherObject)
+	{
+		if(! (otherObject instanceof Block))
+			return false;
+		
+		Block other = (Block) otherObject;
+		
+		return (this.timestamp == other.timestamp) &&
+				(this.lastHash.equals(other.lastHash)) &&
+				(this.hash.equals(other.hash)) &&
+				(this.data.toString().equals(other.data.toString())) &&
+				(this.nonce == other.nonce)&&
+				(this.difficulty == other.difficulty);
 	}
 	
 	public String toString()

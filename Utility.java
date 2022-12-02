@@ -14,7 +14,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
-import java.util.HashMap;
 
 /**
  * Utility Methods
@@ -25,7 +24,7 @@ public class Utility
 {
 	
 	private static Base64.Encoder encoder = Base64.getEncoder();
-	private static Base64.Decoder decoder = Base64.getDecoder();
+	//private static Base64.Decoder decoder = Base64.getDecoder();
 	public static double mining_reward = 50;
 	
 	
@@ -113,7 +112,7 @@ public class Utility
 	 */
 	public static PublicKey retrievePublicKey(String encodedKey) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException
 	{	
-		Base64.Encoder encoder = Base64.getEncoder();
+		//Base64.Encoder encoder = Base64.getEncoder();
 		Base64.Decoder decoder = Base64.getDecoder();
 		KeyFactory factory = KeyFactory.getInstance("EC");
 		
@@ -135,7 +134,7 @@ public class Utility
 	 */
 	public static PrivateKey retrievePrivateKey(String encodedKey) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException
 	{	
-		Base64.Encoder encoder = Base64.getEncoder();
+		//Base64.Encoder encoder = Base64.getEncoder();
 		Base64.Decoder decoder = Base64.getDecoder();
 		KeyFactory factory = KeyFactory.getInstance("EC");
 		
