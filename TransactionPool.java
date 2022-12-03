@@ -128,8 +128,9 @@ public class TransactionPool
 	 */
 	public void sortByTimestamp()
 	{
-
-		Transaction[] transactions = (Transaction[]) pool.toArray();
+		
+		Transaction[] transactions = new Transaction[pool.size()];
+		transactions = pool.toArray(transactions);
 		mergeSortByTimestamp(transactions);
 		pool = new ArrayList<Transaction>(Arrays.asList(transactions));
 		

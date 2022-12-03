@@ -83,10 +83,13 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 		List<Message> outgoingQueue = Collections.synchronizedList(new ArrayList<Message>());
 		pool = new TransactionPool();
 		p2p = new P2pServer(incomingQueue, outgoingQueue);
+
 		wallet = new Wallet(keys,spent);
+
 		chain = block;
+
 		miner = new Miner();
-		
+
 		
 		
 		
@@ -189,10 +192,11 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 		gbc.gridx = 0;
 		gbc.gridwidth = 3;
 		add(pnl_trans,gbc);
+		MiningObserver observer = this;
 		
 		JButton btn_mine = new JButton("Start Mining");
 		btn_mine.addActionListener(new ActionListener() {
-
+		
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if(!mining)
@@ -207,7 +211,7 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 				}
 				repaint();
 				
-				new Thread(new MineThread(chain, pool, miner,wallet)).start();
+				new Thread(new MineThread(chain, pool, miner,wallet,observer)).start();
 				
 			}
 			
@@ -297,6 +301,7 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 	public void update()
 	{
 		lbl_balance.setText("GVC"+wallet.calculateBalance(chain,pool));
+		repaint();
 	}
 	
 	public void updateWallet(String keys) throws FileNotFoundException
@@ -307,6 +312,19 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 		writer.print(encrypter.encrypt(keys));
 		writer.close();
 	}
+	
+	
+	@Override
+	public void blockFound(Block block) 
+	{
+		chain.addBlock(block);
+		this.update();
+		
+	}
+	
+	
+	
+	
 	
 	
 	
@@ -403,12 +421,7 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 	}
 
 
-	@Override
-	public void blockFound(Block block) 
-	{
-		
-		
-	}
+	
 
 
 	
@@ -430,13 +443,14 @@ class MineThread implements Runnable
 	private Blockchain blockchain;
 	private TransactionPool pool;
 	
-	public MineThread(Blockchain blockchain, TransactionPool pool, Miner m,Wallet w)
+	public MineThread(Blockchain blockchain, TransactionPool pool, Miner m,Wallet w, MiningObserver observer)
 	{
 		mining = true;
 		this.pool = pool;
 		this.blockchain = blockchain;
 		this.miner = m;
 		this.wallet = w;
+		this.observer = observer;
 	}
 	
 	public void setMining(boolean mining)

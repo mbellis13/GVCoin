@@ -34,7 +34,7 @@ public class P2pServer
 
 		ArrayList<String> neighbors = new ArrayList<String>();
 		neighbors.add("127.0.0.1");
-		ArrayList<String> receivedIds = new ArrayList<String>();
+		
 		
 		
 		MessageSender[] senders = new MessageSender[4];
@@ -44,16 +44,45 @@ public class P2pServer
 			new Thread(senders[i]).start();
 		}
 		
+		
+		
+		
+		
+		
+		
+	}
+}
+
+class ServerServing implements Runnable
+{
+	
+	private List<Message> incomingQueue;
+	private List<Message> outgoingQueue;
+	private ArrayList<String> neighbors;
+	
+	public ServerServing(List<Message> incomingQueue, List<Message> outgoingQueue, ArrayList<String> neighbors)
+	{
+		this.incomingQueue = incomingQueue;
+		this.outgoingQueue = outgoingQueue;
+		neighbors = neighbors;
+	}
+	@Override
+	public void run() {
+		
 		ServerSocket serverSocket = null;
 		try {
-			serverSocket = new ServerSocket(38012);
+			serverSocket = new ServerSocket(38013);
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			System.exit(1);
 		}
-		
+		ArrayList<String> receivedIds = new ArrayList<String>();
 		while(true)
 		{
+			
+			
+			
+			
 			try
 			{
 				
@@ -89,13 +118,11 @@ public class P2pServer
 			}
 		}
 		
-		
-		
 	}
 	
-	
-
 }
+
+
 
 
 /**
