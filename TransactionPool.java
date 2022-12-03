@@ -27,8 +27,7 @@ public class TransactionPool
 		
 		for(Transaction t : pool)
 		{
-			if(t.getInputs().size() == 1 &&
-			t.getInputs().get(0).getAddress().equals(address))
+			if(t.getInput().getAddress().equals(address))
 				return t;
 		}
 		return null;

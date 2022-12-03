@@ -144,7 +144,7 @@ public class Wallet
 	 */
 	public Transaction generateTransactions(String destAddr,Blockchain bc, TransactionPool pool, double amt) throws InvalidKeySpecException, NoSuchProviderException
 	{	
-		ArrayList<Input> inputs = new ArrayList<Input>();
+		Input input = null;
 		ArrayList<Output> outputs = new ArrayList<Output>();
 		ArrayList<KeyPair>keysForInputs = new ArrayList<KeyPair>();
 		//ArrayList<Transaction> transactions = new ArrayList<Transaction>();
@@ -196,7 +196,7 @@ public class Wallet
 		{	
 			
 			try {
-				inputs.add(Transaction.generateInput(key, outputs, bc.getKeyBalance(pool, key.getPublic()))); 
+				input = Transaction.generateInput(key, outputs, bc.getKeyBalance(pool, key.getPublic())); 
 				
 			} catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException
 					| UnsupportedEncodingException e) {
@@ -207,7 +207,7 @@ public class Wallet
 			
 		}
 		
-		Transaction newTransaction = new Transaction(inputs,outputs);
+		Transaction newTransaction = new Transaction(input,outputs);
 		pending.add(newTransaction);
 		return newTransaction;
 	}

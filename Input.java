@@ -42,8 +42,11 @@ public class Input
 		return address;
 	}
 	
-	
-	
+	@Override
+	public String toString()
+	{
+		return "\n\t\tamount: " + amount+ "\n\t\taddress: " + address + "\n\t\tsignature: " + signature;
+	}
 	
 
 }

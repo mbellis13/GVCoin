@@ -21,5 +21,10 @@ public class Output
 		
 	}
 	
+	@Override
+	public String toString()
+	{
+		return "\n\t\taddress: " + address + "\n\t\tamount: " + amount;
+	}
 
 }

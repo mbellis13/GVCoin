@@ -57,7 +57,7 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 	
 	private JLabel lbl_balance;
 	private JLabel lbl_output;
-	private boolean mining = false;
+	private MineThread mining = null;
 	private AESencryption encrypter;
 	private String username;
 	
@@ -199,19 +199,20 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 		
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if(!mining)
+				if(mining == null)
 				{
 					btn_mine.setText("Stop Mining");
-					mining = true;
+					mining = new MineThread(chain, pool, miner,wallet,observer);
 				}
 				else
 				{
 					btn_mine.setText("Start Mining");
-					mining = false;
+					mining.setMining(false);
+					mining = null;
 				}
 				repaint();
-				
-				new Thread(new MineThread(chain, pool, miner,wallet,observer)).start();
+				if(mining != null)
+					new Thread(mining).start();
 				
 			}
 			
@@ -292,10 +293,6 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 	}
 	
 	
-	public boolean getMining()
-	{
-		return mining;
-	}
 
 	
 	public void update()
@@ -476,7 +473,10 @@ class MineThread implements Runnable
 				Block b = miner.mineBlock(blockchain, key, pool.getPool());
 				if(b != null)
 				{
-					blockchain.addBlock(b);
+					synchronized(blockchain)
+					{
+						blockchain.addBlock(b);
+					}
 					observer.blockFound(b);
 					key = null;
 				}

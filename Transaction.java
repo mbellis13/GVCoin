@@ -23,7 +23,7 @@ public class Transaction implements Serializable
 	private static final long serialVersionUID = 134031190761313L;
 	
 	private String id;
-	private ArrayList<Input> inputs;
+	private Input input;
 	private ArrayList<Output> outputs;
 	private long timestamp;
 
@@ -34,48 +34,48 @@ public class Transaction implements Serializable
 	 * @param ip input HashMap<String, String>
 	 * @param op output ArrayList
 	 */
-	public Transaction(ArrayList<Input> ip, ArrayList<Output> op)
+	public Transaction(Input ip, ArrayList<Output> op)
 	{
 		id = UUID.randomUUID().toString();
 		Date d = new Date();
 		timestamp = d.getTime();
-		inputs = ip;
+		input = ip;
 		outputs = op;	
 	}
 	
 	
-	/**
-	 * Create a Transaction given sender's wallet recipient
-	 * 		address and amount to send
-	 * @param sender  sender's wallet object
-	 * @param recipient recipient's address
-	 * @param amount number of coin to send
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 * @throws SignatureException
-	 * @throws UnsupportedEncodingException
-	 * @throws NoSuchProviderException 
-	 * @throws InvalidKeySpecException 
-	 */
-	public Transaction(KeyPair key,double senderBalance, String recipient, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException 
-	{
-		if (amount > senderBalance)
-		{
-			throw new IllegalArgumentException("amount: " + amount + "exceeds balance.");
-		}
-
-		
-		outputs = new ArrayList<Output>();
-		Output op1 = new Output(Utility.publicKeyToAddress(key.getPublic()), senderBalance - amount);
-		outputs.add(op1);
-		
-		Output op2 = new Output(recipient, amount);
-		outputs.add(op2);
-
-
-		id = UUID.randomUUID().toString();
-		this.signTransaction(senderBalance,key);
-	}	
+//	/**
+//	 * Create a Transaction given sender's wallet recipient
+//	 * 		address and amount to send
+//	 * @param sender  sender's wallet object
+//	 * @param recipient recipient's address
+//	 * @param amount number of coin to send
+//	 * @throws InvalidKeyException
+//	 * @throws NoSuchAlgorithmException
+//	 * @throws SignatureException
+//	 * @throws UnsupportedEncodingException
+//	 * @throws NoSuchProviderException 
+//	 * @throws InvalidKeySpecException 
+//	 */
+//	public Transaction(KeyPair key,double senderBalance, String recipient, double amount) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException, InvalidKeySpecException, NoSuchProviderException 
+//	{
+//		if (amount > senderBalance)
+//		{
+//			throw new IllegalArgumentException("amount: " + amount + "exceeds balance.");
+//		}
+//
+//		
+//		outputs = new ArrayList<Output>();
+//		Output op1 = new Output(Utility.publicKeyToAddress(key.getPublic()), senderBalance - amount);
+//		outputs.add(op1);
+//		
+//		Output op2 = new Output(recipient, amount);
+//		outputs.add(op2);
+//
+//
+//		id = UUID.randomUUID().toString();
+//		this.signTransaction(senderBalance,key);
+//	}	
 	
 	
 	
@@ -88,14 +88,13 @@ public class Transaction implements Serializable
 	public static Transaction getMiningRewardTransaction(String publicKey) throws FileNotFoundException
 	{
 		//Generate inputs
-		ArrayList<Input> ips = new ArrayList<Input>();
-		ips.add(new Input("mining reward",Blockchain.MINING_REWARD,"mining reward"));
+		Input ip = new Input("mining reward",Blockchain.MINING_REWARD,"mining reward");
 		
 		//generate outputs
 		ArrayList<Output> op = new ArrayList<Output>();
 		Output op1 = new Output(publicKey,Blockchain.MINING_REWARD);
 		op.add(op1);
-		return new Transaction(ips,op);
+		return new Transaction(ip,op);
 	}
 	
 	
@@ -106,20 +105,20 @@ public class Transaction implements Serializable
 
 	
 	
-	/**
-	 * signs this transaction
-	 * @param sender sender's wallet
-	 * @throws InvalidKeyException
-	 * @throws NoSuchAlgorithmException
-	 * @throws SignatureException
-	 * @throws UnsupportedEncodingException
-	 */
-	public void signTransaction(double currentBalance, KeyPair key) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
-	{
-		inputs = new ArrayList<Input>();
-		Input input = new Input(Utility.publicKeyToAddress(key.getPublic()),currentBalance,Utility.sign(Utility.hash(outputs.toString()),key.getPrivate()));
-		inputs.add(input);
-	}
+//	/**
+//	 * signs this transaction
+//	 * @param sender sender's wallet
+//	 * @throws InvalidKeyException
+//	 * @throws NoSuchAlgorithmException
+//	 * @throws SignatureException
+//	 * @throws UnsupportedEncodingException
+//	 */
+//	public void signTransaction(double currentBalance, KeyPair key) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, UnsupportedEncodingException
+//	{
+//		inputs = new ArrayList<Input>();
+//		Input input = new Input(Utility.publicKeyToAddress(key.getPublic()),currentBalance,Utility.sign(Utility.hash(outputs.toString()),key.getPrivate()));
+//		inputs.add(input);
+//	}
 	
 	/**
 	 * generates inputs for given transaction
@@ -159,7 +158,7 @@ public class Transaction implements Serializable
 		
 			
 		
-		Input senderInput = this.getInputs().get(0);
+		Input senderInput = input;
 		
 		double chainBalance = bc.getLastOutputBalance(senderInput.getAddress());
 		pool.sortByTimestamp();
@@ -212,12 +211,11 @@ public class Transaction implements Serializable
 				
 				
 		boolean signaturesVerified = true;
-		for(Input input: inputs)
-		{
-			PublicKey key = Utility.retrievePublicKey((String)(input.getAddress()));
-			if(!Utility.verifySignature(key, Utility.hash(this.outputs.toString()), input.getSignature()))
-				{signaturesVerified = false;}
-		}
+
+		PublicKey key = Utility.retrievePublicKey((String)(input.getAddress()));
+		if(!Utility.verifySignature(key, Utility.hash(this.outputs.toString()), input.getSignature()))
+			{signaturesVerified = false;}
+
 		return signaturesVerified;
 		
 		//Utility.verifySignature(key, Utility.hash(t.outputs.toString()), (String)(t.input.get("signature")));
@@ -232,7 +230,7 @@ public class Transaction implements Serializable
 	{
 		String resp = "Transaction:\n" +
 						"\n\tid     : " + id +
-						"\n\tinput  : " + inputs +
+						"\n\tinput  : " + input +
 						"\n\toutput : ";
 		for(int i = 0; i<outputs.size(); i++)
 		{
@@ -247,9 +245,9 @@ public class Transaction implements Serializable
 		return id;
 	}
 	
-	public ArrayList<Input> getInputs()
+	public Input getInput()
 	{
-		return inputs;
+		return input;
 	}
 	
 	public ArrayList<Output> getOutputs()
