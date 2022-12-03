@@ -62,13 +62,12 @@ public class Blockchain implements Serializable
 			FileOutputStream fos = new FileOutputStream("blockchain.dat");
 			ObjectOutputStream oos = new ObjectOutputStream(fos);
 			oos.writeObject(this);
-
 			
 			oos.close();
 		}
-		catch(IOException ex)
+		catch(IOException e)
 		{
-			System.out.println("error writing chain");
+			e.printStackTrace();
 		}
 	}
 	
@@ -207,6 +206,7 @@ public class Blockchain implements Serializable
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
+		this.backupChain();
 		
 	}
 	

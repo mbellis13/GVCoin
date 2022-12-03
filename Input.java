@@ -1,6 +1,8 @@
+import java.io.Serializable;
 
-public class Input 
+public class Input implements Serializable
 {
+	private static final long serialVersionUID = 7654321131313131388L;
 
 	private String signature;
 	private double amount;

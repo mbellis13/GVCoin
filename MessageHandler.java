@@ -125,8 +125,9 @@ class Handler implements Runnable
 					synchronized(outgoingQueue)
 					{
 						outgoingQueue.add(message);
+						outgoingQueue.notifyAll();
 					}
-					outgoingQueue.notifyAll();
+					
 				}
 				
 				

@@ -201,10 +201,10 @@ public class Transaction implements Serializable
 		if(senderInput.getAmount() != totalOutput)
 			{return false;}
 //		Don't think we need to verify mining reward transaction since
-//		if(senderInput.getAddress().equals("mining_reward") && 
-//				sendInput.getAmount()==Blockchain.MINING_REWARD &&
-//				inputs.size() == 1 && outputs.size()==1)	
-//			return true;
+		if(senderInput.getAddress().equals("mining_reward") && 
+				senderInput.getAmount()==Blockchain.MINING_REWARD &&
+				outputs.size()==1)	
+			return true;
 		
 		
 				

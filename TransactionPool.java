@@ -6,10 +6,12 @@ import java.util.Arrays;
 public class TransactionPool 
 {
 	private ArrayList<Transaction> pool;
+	private MiningObserver observer;
 	
-	public TransactionPool()
+	public TransactionPool(MiningObserver observer)
 	{
 		pool = new ArrayList<Transaction>();
+		this.observer = observer;
 	}
 	
 
@@ -61,24 +63,10 @@ public class TransactionPool
 		}
 		else
 			pool.add(newTrans);
+		observer.transactionReceived();
 	}
 	
 	
-	
-//	public ArrayList<Transaction> getValidTransactions(Blockchain chain)
-//	{
-//		this.sortByTimestamp();
-//		ArrayList<Transaction> valid = new ArrayList<Transaction>();
-//		for(Transaction t : pool)
-//		{
-//			if(Transaction.verifyTransaction(t,chain,this))
-//				valid.add(t);
-//			else
-//				System.out.println("invalid transaction: " + t.getID());
-//		}
-//		
-//		return valid;
-//	}
 	
 	
 	

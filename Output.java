@@ -1,6 +1,8 @@
+import java.io.Serializable;
 
-public class Output 
+public class Output implements Serializable
 {
+	private static final long serialVersionUID = 98628282822051612L;
 	private String address;
 	private double amount;
 	

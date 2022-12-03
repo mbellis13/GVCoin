@@ -81,7 +81,7 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 		pending = new ArrayList<Transaction>();
 		List<Message> incomingQueue = Collections.synchronizedList(new ArrayList<Message>());
 		List<Message> outgoingQueue = Collections.synchronizedList(new ArrayList<Message>());
-		pool = new TransactionPool();
+		pool = new TransactionPool(this);
 		p2p = new P2pServer(incomingQueue, outgoingQueue);
 
 		wallet = new Wallet(keys,spent);
@@ -171,8 +171,9 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 				synchronized(outgoingQueue)
 				{
 					outgoingQueue.add(new Message(Message.Type.ADD_TRANS,null,t,null));
+					outgoingQueue.notifyAll();
 				}
-				outgoingQueue.notifyAll();
+				
 				
 				
 				txt_to.setText("");
@@ -317,6 +318,12 @@ public class GVCoinGUI extends JFrame implements MiningObserver
 		chain.addBlock(block);
 		this.update();
 		
+	}
+	
+	@Override
+	public void transactionReceived()
+	{
+		this.update();
 	}
 	
 	
